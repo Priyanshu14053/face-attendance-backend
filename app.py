@@ -12,6 +12,9 @@ from datetime import datetime
 from database import engine, SessionLocal
 from models import Base, User, Attendance
 
+# ⚠️ RESET DATABASE TABLES
+Base.metadata.drop_all(bind=engine)
+
 # ✅ CREATE TABLES
 Base.metadata.create_all(bind=engine)
 
