@@ -10,6 +10,10 @@ from passlib.context import CryptContext
 from datetime import datetime
 from database import engine, SessionLocal
 from models import Base, User, Attendance
+from models import Base
+from database import engine
+
+Base.metadata.create_all(bind=engine)
 
 
 
