@@ -238,8 +238,7 @@ async def register_with_face(
 
         password=hashed_password,
 
-        face_encoding=
-        json.dumps(encoding),
+        face_encoding= json.dumps(encoding),
 
         role="student"
     )
