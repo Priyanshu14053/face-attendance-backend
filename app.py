@@ -59,8 +59,7 @@ def create_user(
 
     password = password[:72]
 
-    hashed_password =
-    pwd_context.hash(password)
+    hashed_password = pwd_context.hash(password)
 
     user = User(
         username=username,
@@ -98,14 +97,12 @@ async def detect_face(
         cv2.COLOR_RGB2GRAY
     )
 
-    face_cascade =
-    cv2.CascadeClassifier(
+    face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades +
         "haarcascade_frontalface_default.xml"
     )
 
-    faces =
-    face_cascade.detectMultiScale(
+    faces = face_cascade.detectMultiScale(
         gray,
         1.3,
         5
@@ -189,8 +186,7 @@ async def register_with_face(
 
     db = SessionLocal()
 
-    existing_user =
-    db.query(User).filter(
+    existing_user = db.query(User).filter(
         User.username == username
     ).first()
 
@@ -212,8 +208,7 @@ async def register_with_face(
 
     img = np.array(image)
 
-    encodings =
-    face_recognition.face_encodings(img)
+    encodings = face_recognition.face_encodings(img)
 
     if len(encodings) == 0:
 
@@ -224,13 +219,11 @@ async def register_with_face(
             "No face detected ❌"
         }
 
-    encoding =
-    encodings[0].tolist()
+    encoding = encodings[0].tolist()
 
     password = password[:72]
 
-    hashed_password =
-    pwd_context.hash(password)
+    hashed_password = pwd_context.hash(password)
 
     user = User(
 
@@ -291,8 +284,7 @@ async def recognize(
 
         img = np.array(image)
 
-        encodings =
-        face_recognition.face_encodings(img)
+        encodings = face_recognition.face_encodings(img)
 
         if len(encodings) == 0:
 
@@ -301,8 +293,7 @@ async def recognize(
                 "No face detected ❌"
             }
 
-        unknown_encoding =
-        encodings[0]
+        unknown_encoding = encodings[0]
 
         users = db.query(User).all()
 
@@ -315,8 +306,7 @@ async def recognize(
                 json.loads(user.face_encoding)
             )
 
-            distance_face =
-            face_recognition.face_distance(
+            distance_face = face_recognition.face_distance(
                 [stored_encoding],
                 unknown_encoding
             )[0]
@@ -327,14 +317,11 @@ async def recognize(
 
                 now = datetime.now()
 
-                today_date =
-                now.strftime("%Y-%m-%d")
+                today_date = now.strftime("%Y-%m-%d")
 
-                current_time =
-                now.strftime("%H:%M:%S")
+                current_time = now.strftime("%H:%M:%S")
 
-                existing =
-                db.query(Attendance).filter(
+                existing = db.query(Attendance).filter(
 
                     Attendance.name ==
                     user_name,
@@ -350,8 +337,7 @@ async def recognize(
                     if existing:
 
                         return {
-                            "message":
-                            f"{user_name} already checked in ⚠️",
+                            "message": f"{user_name} already checked in ⚠️",
 
                             "type":
                             "already_checkin"
@@ -400,15 +386,13 @@ async def recognize(
                     if existing.check_out:
 
                         return {
-                            "message":
-                            f"{user_name} already checked out ⚠️",
+                            "message": f"{user_name} already checked out ⚠️",
 
                             "type":
                             "already_checkout"
                         }
 
-                    existing.check_out =
-                    current_time
+                    existing.check_out = current_time
 
                     db.commit()
 
@@ -438,8 +422,7 @@ def get_attendance():
 
     db = SessionLocal()
 
-    records =
-    db.query(Attendance).all()
+    records = db.query(Attendance).all()
 
     data = []
 
