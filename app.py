@@ -12,9 +12,6 @@ from datetime import datetime
 from database import engine, SessionLocal
 from models import Base, User, Attendance
 
-# ⚠️ RESET DATABASE TABLES
-Base.metadata.drop_all(bind=engine)
-
 # ✅ CREATE TABLES
 Base.metadata.create_all(bind=engine)
 
@@ -60,7 +57,9 @@ def create_user(
 
     db = SessionLocal()
 
-    password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
+    password = password.encode(
+        'utf-8'
+    )[:72].decode('utf-8', 'ignore')
 
     hashed_password = pwd_context.hash(password)
 
@@ -76,47 +75,6 @@ def create_user(
 
     return {
         "message": "User created ✅"
-    }
-
-# =====================================
-# DETECT FACE
-# =====================================
-
-@app.post("/detect-face")
-async def detect_face(
-    file: UploadFile = File(...)
-):
-
-    contents = await file.read()
-
-    image = Image.open(
-        io.BytesIO(contents)
-    ).convert("RGB")
-
-    img = np.array(image)
-
-    gray = cv2.cvtColor(
-        img,
-        cv2.COLOR_RGB2GRAY
-    )
-
-    face_cascade = cv2.CascadeClassifier(
-        cv2.data.haarcascades +
-        "haarcascade_frontalface_default.xml"
-    )
-
-    faces = face_cascade.detectMultiScale(
-        gray,
-        1.3,
-        5
-    )
-
-    return {
-        "faces_detected": len(faces),
-        "message":
-        "Face Detected ✅"
-        if len(faces) > 0
-        else "No Face Found ❌"
     }
 
 # =====================================
@@ -144,7 +102,9 @@ def login(
             "message": "User not found ❌"
         }
 
-    password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
+    password = password.encode(
+        'utf-8'
+    )[:72].decode('utf-8', 'ignore')
 
     if not pwd_context.verify(
         password,
@@ -211,6 +171,9 @@ async def register_with_face(
 
     img = np.array(image)
 
+    # ✅ OPTIMIZE IMAGE SIZE
+    img = cv2.resize(img, (640, 480))
+
     encodings = face_recognition.face_encodings(img)
 
     if len(encodings) == 0:
@@ -224,7 +187,9 @@ async def register_with_face(
 
     encoding = encodings[0].tolist()
 
-    password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
+    password = password.encode(
+        'utf-8'
+    )[:72].decode('utf-8', 'ignore')
 
     hashed_password = pwd_context.hash(password)
 
@@ -241,7 +206,7 @@ async def register_with_face(
 
         password=hashed_password,
 
-        face_encoding= json.dumps(encoding),
+        face_encoding=json.dumps(encoding),
 
         role="student"
     )
@@ -286,6 +251,9 @@ async def recognize(
 
         img = np.array(image)
 
+        # ✅ OPTIMIZE IMAGE SIZE
+        img = cv2.resize(img, (640, 480))
+
         encodings = face_recognition.face_encodings(img)
 
         if len(encodings) == 0:
@@ -297,7 +265,8 @@ async def recognize(
 
         unknown_encoding = encodings[0]
 
-        users = db.query(User).all()
+        # ✅ MEMORY OPTIMIZATION
+        users = db.query(User).yield_per(5)
 
         for user in users:
 
@@ -339,7 +308,8 @@ async def recognize(
                     if existing:
 
                         return {
-                            "message": f"{user_name} already checked in ⚠️",
+                            "message":
+                            f"{user_name} already checked in ⚠️",
 
                             "type":
                             "already_checkin"
@@ -388,7 +358,8 @@ async def recognize(
                     if existing.check_out:
 
                         return {
-                            "message": f"{user_name} already checked out ⚠️",
+                            "message":
+                            f"{user_name} already checked out ⚠️",
 
                             "type":
                             "already_checkout"
