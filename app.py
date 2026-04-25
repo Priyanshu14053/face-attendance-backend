@@ -60,7 +60,7 @@ def create_user(
 
     db = SessionLocal()
 
-    password = password[:72]
+    password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
 
     hashed_password = pwd_context.hash(password)
 
@@ -144,7 +144,7 @@ def login(
             "message": "User not found ❌"
         }
 
-    password = password[:72]
+    password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
 
     if not pwd_context.verify(
         password,
@@ -224,7 +224,7 @@ async def register_with_face(
 
     encoding = encodings[0].tolist()
 
-    password = password[:72]
+    password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
 
     hashed_password = pwd_context.hash(password)
 
