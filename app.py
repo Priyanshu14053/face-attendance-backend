@@ -5,6 +5,7 @@ from PIL import Image
 import io
 import face_recognition
 import json
+import pytz
 
 from passlib.context import CryptContext
 from datetime import datetime
@@ -286,11 +287,13 @@ async def recognize(
 
                 user_name = user.name
 
-                now = datetime.now()
+                india = pytz.timezone("Asia/Kolkata")
+
+                now = datetime.now(india)
 
                 today_date = now.strftime("%Y-%m-%d")
 
-                current_time = now.strftime("%H:%M:%S")
+                current_time = now.strftime("%I:%M %p")
 
                 existing = db.query(Attendance).filter(
 
