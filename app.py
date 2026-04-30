@@ -246,25 +246,21 @@ async def recognize(
 
         contents = await file.read()
 
-        image = Image.open(
-            io.BytesIO(contents)
-        ).convert("RGB")
-
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
         img = np.array(image)
 
-        # ✅ OPTIMIZE IMAGE SIZE
-        img = cv2.resize(img, (640, 480))
+        # 🔥 DETECT FACE FIRST
+        face_locations = face_recognition.face_locations(img, model="hog")
 
-        encodings = face_recognition.face_encodings(img)
+        print("Faces detected:", len(face_locations))
 
-        if len(encodings) == 0:
+        if len(face_locations) == 0:
+            db.close()
+            return {"message": "No face detected ❌"}
 
-            return {
-                "message":
-                "No face detected ❌"
-            }
-
-        unknown_encoding = encodings[0]
+        # 🔥 ENCODE USING DETECTED FACE
+        encodings = face_recognition.face_encodings(img, face_locations)
+        encoding = encodings[0].tolist()
 
         # ✅ MEMORY OPTIMIZATION
         users = db.query(User).yield_per(5)
