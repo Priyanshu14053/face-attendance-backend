@@ -155,73 +155,60 @@ async def register_with_face(
     ).first()
 
     if existing_user:
-
         db.close()
-
         return {
             "status": "error",
-            "message":
-            "Username already exists ⚠️"
+            "message": "Username already exists ⚠️"
         }
 
     contents = await file.read()
 
-    image = Image.open(
-        io.BytesIO(contents)
-    ).convert("RGB")
-
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
     img = np.array(image)
 
-    # ✅ OPTIMIZE IMAGE SIZE
-    img = cv2.resize(img, (640, 480))
+    # 🔥 KEEP ASPECT RATIO (NO DISTORTION)
+    h, w = img.shape[:2]
+    if w > 800:
+        scale = 800 / w
+        img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
 
-    encodings = face_recognition.face_encodings(img)
+    # 🔥 DETECT FACE FIRST
+    face_locations = face_recognition.face_locations(img, model="hog")
 
-    if len(encodings) == 0:
+    print("Register Faces:", len(face_locations))
 
+    if len(face_locations) == 0:
         db.close()
+        return {"message": "No face detected ❌"}
 
-        return {
-            "message":
-            "No face detected ❌"
-        }
+    # 🔥 ENCODE FACE
+    encodings = face_recognition.face_encodings(img, face_locations)
 
     encoding = encodings[0].tolist()
 
-    password = password.encode(
-        'utf-8'
-    )[:72].decode('utf-8', 'ignore')
-
+    password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
     hashed_password = pwd_context.hash(password)
 
     user = User(
-
         name=name,
         email=email,
         phone=phone,
         department=department,
         year=year,
         address=address,
-
         username=username,
-
         password=hashed_password,
-
         face_encoding=json.dumps(encoding),
-
         role="student"
     )
 
     db.add(user)
-
     db.commit()
-
     db.close()
 
     return {
         "status": "success",
-        "message":
-        "User registered successfully ✅"
+        "message": "User registered successfully ✅"
     }
 
 # =====================================
@@ -232,11 +219,8 @@ async def register_with_face(
 async def recognize(
 
     file: UploadFile = File(...),
-
     latitude: str = Form(...),
-
     longitude: str = Form(...),
-
     action: str = Form(...)
 ):
 
@@ -249,20 +233,25 @@ async def recognize(
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         img = np.array(image)
 
-        # 🔥 DETECT FACE FIRST
+        # 🔥 KEEP ASPECT RATIO
+        h, w = img.shape[:2]
+        if w > 800:
+            scale = 800 / w
+            img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
+
+        # 🔥 DETECT FACE
         face_locations = face_recognition.face_locations(img, model="hog")
 
         print("Faces detected:", len(face_locations))
 
         if len(face_locations) == 0:
-            db.close()
             return {"message": "No face detected ❌"}
 
-        # 🔥 ENCODE USING DETECTED FACE
+        # 🔥 ENCODE FACE
         encodings = face_recognition.face_encodings(img, face_locations)
-        encoding = encodings[0].tolist()
+        unknown_encoding = encodings[0]
 
-        # ✅ MEMORY OPTIMIZATION
+        # ✅ LOOP USERS
         users = db.query(User).yield_per(5)
 
         for user in users:
@@ -270,119 +259,83 @@ async def recognize(
             if not user.face_encoding:
                 continue
 
-            stored_encoding = np.array(
-                json.loads(user.face_encoding)
-            )
+            stored_encoding = np.array(json.loads(user.face_encoding))
 
-            distance_face = face_recognition.face_distance(
+            distance = face_recognition.face_distance(
                 [stored_encoding],
                 unknown_encoding
             )[0]
 
-            if distance_face < 0.5:
+            print(f"Distance with {user.name}:", distance)
+
+            # 🔥 INCREASED TOLERANCE (VERY IMPORTANT)
+            if distance < 0.6:
 
                 user_name = user.name
 
                 india = pytz.timezone("Asia/Kolkata")
-
                 now = datetime.now(india)
 
                 today_date = now.strftime("%Y-%m-%d")
-
                 current_time = now.strftime("%I:%M %p")
 
                 existing = db.query(Attendance).filter(
-
-                    Attendance.name ==
-                    user_name,
-
-                    Attendance.date ==
-                    today_date
-
+                    Attendance.name == user_name,
+                    Attendance.date == today_date
                 ).first()
 
                 # ✅ CHECK IN
                 if action == "check_in":
 
                     if existing:
-
                         return {
-                            "message":
-                            f"{user_name} already checked in ⚠️",
-
-                            "type":
-                            "already_checkin"
+                            "message": f"{user_name} already checked in ⚠️",
+                            "type": "already_checkin"
                         }
 
                     attendance = Attendance(
-
                         name=user_name,
-
                         date=today_date,
-
                         check_in=current_time,
-
                         check_out="",
-
                         latitude=latitude,
-
                         longitude=longitude
                     )
 
                     db.add(attendance)
-
                     db.commit()
 
                     return {
-                        "message":
-                        f"Check-in marked for {user_name} ✅",
-
-                        "type":
-                        "check_in"
+                        "message": f"Check-in marked for {user_name} ✅",
+                        "type": "check_in"
                     }
 
                 # ✅ CHECK OUT
                 elif action == "check_out":
 
                     if not existing:
-
                         return {
-                            "message":
-                            "Please check in first ❌",
-
-                            "type":
-                            "error"
+                            "message": "Please check in first ❌",
+                            "type": "error"
                         }
 
                     if existing.check_out:
-
                         return {
-                            "message":
-                            f"{user_name} already checked out ⚠️",
-
-                            "type":
-                            "already_checkout"
+                            "message": f"{user_name} already checked out ⚠️",
+                            "type": "already_checkout"
                         }
 
                     existing.check_out = current_time
-
                     db.commit()
 
                     return {
-                        "message":
-                        f"Check-out marked for {user_name} ✅",
-
-                        "type":
-                        "check_out"
+                        "message": f"Check-out marked for {user_name} ✅",
+                        "type": "check_out"
                     }
 
-        return {
-            "message":
-            "Unknown person ❌"
-        }
+        return {"message": "Unknown person ❌"}
 
     finally:
-
         db.close()
 
 # =====================================
